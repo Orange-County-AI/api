@@ -2,9 +2,16 @@ from fastapi import FastAPI, HTTPException, Query
 from meetup_notifier import get_events
 from typing import List, Dict, Any, Literal
 from dataclasses import asdict
+from fastapi.responses import RedirectResponse
 
 app = FastAPI(title="Orange County AI Meetup API")
 MEETUP_URL = "https://www.meetup.com/orange-county-ai/events/"
+
+
+@app.get("/", response_class=RedirectResponse, status_code=303)
+async def redirect_to_docs():
+    """Redirect root path to API documentation."""
+    return "/docs"
 
 
 @app.get("/events", response_model=List[Dict[str, Any]])

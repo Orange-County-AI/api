@@ -11,7 +11,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync
 
 # copy the rest of the app
-COPY hello.py ./
+COPY app.py ./
 
 # run the app
-CMD ["uv", "run", "uvicorn", "hello:app", "--host", "0.0.0.0", "--port", "8283"]
+CMD ["uv", "run", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8283"]
