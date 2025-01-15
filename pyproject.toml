@@ -1,0 +1,12 @@
+[project]
+dependencies = [
+  "fastapi>=0.115.6",
+  "httpx>=0.28.1",
+  "meetup-notifier>=0.1.2",
+  "uvicorn>=0.34.0",
+]
+description = "Add your description here"
+name = "ocai-api"
+readme = "README.md"
+requires-python = ">=3.11"
+version = "0.1.0"
