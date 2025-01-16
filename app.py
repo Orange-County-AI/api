@@ -10,7 +10,9 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Orange County AI Meetup API")
+API_VERSION = "1.0.0"
+
+app = FastAPI(title="Orange County AI Meetup API", version=API_VERSION)
 
 # Add CORS middleware configuration
 app.add_middleware(
@@ -74,3 +76,12 @@ async def list_events(
         return events_list
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Log when the application starts up"""
+    logger.info("=" * 50)
+    logger.info(f"Starting Orange County AI Meetup API v{API_VERSION}")
+    logger.info(f"CORS Configuration: allow_origins=['*'], allow_credentials=False")
+    logger.info("=" * 50)
