@@ -3,8 +3,19 @@ from meetup_notifier import get_events
 from typing import List, Dict, Any, Literal
 from dataclasses import asdict
 from fastapi.responses import RedirectResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Orange County AI Meetup API")
+
+# Add CORS middleware configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
+
 MEETUP_URL = "https://www.meetup.com/orange-county-ai/events/"
 
 
