@@ -1,10 +1,40 @@
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from meetup_notifier import get_events
 from typing import List, Dict, Any, Literal
 from dataclasses import asdict
 from fastapi.responses import RedirectResponse
+from fastapi.middleware.cors import CORSMiddleware
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Orange County AI Meetup API")
+
+# Add CORS middleware configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Log incoming requests and their CORS headers"""
+    logger.info(f"Incoming request: {request.method} {request.url}")
+    logger.info(f"Origin: {request.headers.get('origin')}")
+    logger.info(f"Headers: {dict(request.headers)}")
+
+    response = await call_next(request)
+
+    logger.info(f"Response headers: {dict(response.headers)}")
+    return response
+
+
 MEETUP_URL = "https://www.meetup.com/orange-county-ai/events/"
 
 
