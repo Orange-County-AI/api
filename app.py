@@ -15,19 +15,10 @@ app = FastAPI(title="Orange County AI Meetup API")
 # Add CORS middleware configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://*.lovable.app",
-        "https://*.lovableproject.com",
-        "http://*.lovable.app",
-        "http://*.lovableproject.com",
-        "https://orangecountyai.com",
-        "http://orangecountyai.com",
-    ],
-    allow_origin_regex=r"https://.*\.lovable(project)?\.com?",
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"],
 )
 
 
@@ -42,6 +33,12 @@ async def log_requests(request: Request, call_next):
 
     logger.info(f"Response headers: {dict(response.headers)}")
     return response
+
+
+@app.options("/{path:path}")
+async def options_handler():
+    """Handle OPTIONS requests explicitly"""
+    return {}
 
 
 MEETUP_URL = "https://www.meetup.com/orange-county-ai/events/"
