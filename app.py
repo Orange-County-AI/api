@@ -15,10 +15,19 @@ app = FastAPI(title="Orange County AI Meetup API")
 # Add CORS middleware configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=[
+        "https://*.lovable.app",
+        "https://*.lovableproject.com",
+        "http://*.lovable.app",
+        "http://*.lovableproject.com",
+        "https://orangecountyai.com",
+        "http://orangecountyai.com",
+    ],
+    allow_origin_regex=r"https://.*\.lovable(project)?\.com?",
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 
