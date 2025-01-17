@@ -4,6 +4,7 @@ dependencies = [
   "httpx>=0.28.1",
   "meetup-notifier>=0.1.2",
   "uvicorn>=0.34.0",
+  "PyJWT>=2.8.0",
 ]
 description = "Add your description here"
 name = "ocai-api"
