@@ -121,12 +121,22 @@ async def subscribe_email(email: str = Body(..., embed=True)):
 
             if response.status_code == 201:
                 return {"message": "Successfully subscribed"}
-            else:
-                logger.error(
-                    f"Ghost API error: {response.status_code} - {response.text}"
-                )
-                raise HTTPException(status_code=400, detail="Failed to subscribe email")
+            elif response.status_code == 422:
+                # Check if error is due to existing member
+                error_data = response.json()
+                if any(
+                    "Member already exists" in error.get("context", "")
+                    for error in error_data.get("errors", [])
+                ):
+                    raise HTTPException(
+                        status_code=409, detail="Email is already subscribed"
+                    )
 
+            logger.error(f"Ghost API error: {response.status_code} - {response.text}")
+            raise HTTPException(status_code=400, detail="Failed to subscribe email")
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Subscription error: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
