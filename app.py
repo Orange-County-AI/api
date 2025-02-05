@@ -68,7 +68,10 @@ async def list_events(
         events_list = [asdict(event) for event in events]
 
         # Sort events by date
-        events_list.sort(key=lambda x: x["date"], reverse=(sort == "desc"))
+        events_list.sort(
+            key=lambda x: ("office hours" in x["name"].lower(), x["date"]),
+            reverse=(sort == "desc"),
+        )
 
         # Apply limit if specified
         if limit is not None:
