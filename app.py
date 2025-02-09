@@ -9,7 +9,9 @@ import httpx
 import os
 import jwt
 import time
+import sentry_sdk
 
+sentry_sdk.init(os.environ["SENTRY_DSN"])
 
 MEETUP_URL = "https://www.meetup.com/orange-county-ai/events/"
 
