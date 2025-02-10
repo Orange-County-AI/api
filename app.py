@@ -10,6 +10,9 @@ import os
 import jwt
 import time
 import sentry_sdk
+from pocketbase_orm import PBModel
+from pocketbase import PocketBase
+from loguru import logger
 
 sentry_sdk.init(os.environ["SENTRY_DSN"])
 
@@ -18,9 +21,20 @@ MEETUP_URL = "https://www.meetup.com/orange-county-ai/events/"
 GHOST_API_URL = "https://blog.orangecountyai.com"
 GHOST_ADMIN_KEY = os.environ["GHOST_ADMIN_KEY"]
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+POCKETBASE_URL = os.environ["POCKETBASE_URL"]
+POCKETBASE_USERNAME = os.environ["POCKETBASE_USERNAME"]
+POCKETBASE_PASSWORD = os.environ["POCKETBASE_PASSWORD"]
+
+
+class NewsletterSubscriber(PBModel, collection="newsletter_subscribers"):
+    email: str
+
+
+pocketbase_client = PocketBase(POCKETBASE_URL)
+pocketbase_client.admins.auth_with_password(POCKETBASE_USERNAME, POCKETBASE_PASSWORD)
+
+PBModel.bind_client(pocketbase_client)
+NewsletterSubscriber.sync_collection()
 
 app = FastAPI(title="Orange County AI Meetup API")
 
@@ -108,6 +122,17 @@ async def subscribe_email(email: str = Body(..., embed=True)):
     """Subscribe an email address to the Orange County AI blog."""
     if not GHOST_ADMIN_KEY:
         raise HTTPException(status_code=500, detail="Ghost API key not configured")
+    
+    try:
+        subscriber = NewsletterSubscriber(email=email)
+        subscriber.save()
+    except Exception as e:
+        data = e.data.get("data", {})
+        if data.get("email").get("code", "") == "validation_not_unique":
+            logger.info(f"Email {email} is already subscribed")
+        else:
+            logger.exception(e)
+            raise HTTPException(status_code=500, detail="Internal server error")
 
     try:
         # Generate the token
