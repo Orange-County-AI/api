@@ -14,6 +14,8 @@ from pocketbase_orm import PBModel
 from pocketbase import PocketBase
 from loguru import logger
 
+# logging.basicConfig(level=logging.DEBUG)
+
 sentry_sdk.init(os.environ["SENTRY_DSN"])
 
 MEETUP_URL = "https://www.meetup.com/orange-county-ai/events/"
@@ -28,6 +30,7 @@ POCKETBASE_PASSWORD = os.environ["POCKETBASE_PASSWORD"]
 
 class NewsletterSubscriber(PBModel, collection="newsletter_subscribers"):
     email: str
+    active: bool = True
 
 
 pocketbase_client = PocketBase(POCKETBASE_URL)
