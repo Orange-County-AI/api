@@ -53,17 +53,17 @@ app.add_middleware(
 )
 
 
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    """Log incoming requests and their CORS headers"""
-    logger.info(f"Incoming request: {request.method} {request.url}")
-    logger.info(f"Origin: {request.headers.get('origin')}")
-    logger.info(f"Headers: {dict(request.headers)}")
+# @app.middleware("http")
+# async def log_requests(request: Request, call_next):
+#     """Log incoming requests and their CORS headers"""
+#     logger.info(f"Incoming request: {request.method} {request.url}")
+#     logger.info(f"Origin: {request.headers.get('origin')}")
+#     logger.info(f"Headers: {dict(request.headers)}")
 
-    response = await call_next(request)
+#     response = await call_next(request)
 
-    logger.info(f"Response headers: {dict(response.headers)}")
-    return response
+#     logger.info(f"Response headers: {dict(response.headers)}")
+#     return response
 
 
 @app.get("/", response_class=RedirectResponse, status_code=303)
@@ -121,7 +121,7 @@ def generate_ghost_token(ghost_admin_key: str) -> str:
 
 
 @app.post("/subscribe")
-async def subscribe_email(email: str = Body(..., embed=True)):
+def subscribe_email(email: str = Body(..., embed=True)):
     """Subscribe an email address to the Orange County AI blog."""
     if not GHOST_ADMIN_KEY:
         raise HTTPException(status_code=500, detail="Ghost API key not configured")
@@ -142,31 +142,30 @@ async def subscribe_email(email: str = Body(..., embed=True)):
         token = generate_ghost_token(GHOST_ADMIN_KEY)
 
         # Create a member in Ghost
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{GHOST_API_URL}/ghost/api/admin/members/",
-                headers={
-                    "Authorization": f"Ghost {token}",
-                    "Content-Type": "application/json",
-                },
-                json={"members": [{"email": email, "subscribed": True}]},
-            )
+        response = httpx.post(
+            f"{GHOST_API_URL}/ghost/api/admin/members/",
+            headers={
+                "Authorization": f"Ghost {token}",
+                "Content-Type": "application/json",
+            },
+            json={"members": [{"email": email, "subscribed": True}]},
+        )
 
-            if response.status_code == 201:
-                return {"message": "Successfully subscribed"}
-            elif response.status_code == 422:
-                # Check if error is due to existing member
-                error_data = response.json()
-                if any(
-                    "Member already exists" in error.get("context", "")
-                    for error in error_data.get("errors", [])
-                ):
-                    raise HTTPException(
-                        status_code=409, detail="Email is already subscribed"
-                    )
+        if response.status_code == 201:
+            return {"message": "Successfully subscribed"}
+        elif response.status_code == 422:
+            # Check if error is due to existing member
+            error_data = response.json()
+            if any(
+                "Member already exists" in error.get("context", "")
+                for error in error_data.get("errors", [])
+            ):
+                raise HTTPException(
+                    status_code=409, detail="Email is already subscribed"
+                )
 
-            logger.error(f"Ghost API error: {response.status_code} - {response.text}")
-            raise HTTPException(status_code=400, detail="Failed to subscribe email")
+        logger.error(f"Ghost API error: {response.status_code} - {response.text}")
+        raise HTTPException(status_code=400, detail="Failed to subscribe email")
 
     except HTTPException:
         raise
