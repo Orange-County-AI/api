@@ -2,7 +2,7 @@
 dependencies = [
   "fastapi>=0.115.6",
   "httpx>=0.28.1",
-  "meetup-notifier>=0.1.2",
+  "parsel>=1.8.1",
   "uvicorn>=0.34.0",
   "PyJWT>=2.8.0",
   "sentry-sdk>=2.20.0",

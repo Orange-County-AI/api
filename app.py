@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, Query, Request, Body
-from meetup_notifier import get_events
+from meetup import get_events, MeetupEvent
 from typing import List, Dict, Any, Literal
 from dataclasses import asdict
 from fastapi.responses import RedirectResponse
@@ -125,7 +125,7 @@ def subscribe_email(email: str = Body(..., embed=True)):
     """Subscribe an email address to the Orange County AI blog."""
     if not GHOST_ADMIN_KEY:
         raise HTTPException(status_code=500, detail="Ghost API key not configured")
-    
+
     try:
         subscriber = NewsletterSubscriber(email=email)
         subscriber.save()
