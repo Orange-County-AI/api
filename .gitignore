@@ -9,3 +9,5 @@ wheels/
 # Virtual environments
 .venv
 .env
+meetup_debug.json
+meetup_response.html

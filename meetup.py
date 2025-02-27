@@ -234,12 +234,30 @@ def parse_events_page(html: str) -> list[str]:
 
 
 def get_events(group_url: str) -> list[MeetupEvent]:
-    response = requests.get(group_url)
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Connection": "keep-alive",
+        "Referer": "https://www.meetup.com/",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "same-origin",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1",
+        "Cache-Control": "max-age=0",
+    }
+
+    logger.info(f"Fetching events from {group_url}")
+    response = requests.get(group_url, headers=headers)
     response.raise_for_status()
     events = parse_events_page(response.text)
+
     meetup_events = []
     for event in events:
-        response = requests.get(event)
+        logger.info(f"Fetching event details from {event}")
+        response = requests.get(event, headers=headers)
         response.raise_for_status()
         meetup_event = parse_event_page(response.text)
         meetup_events.append(meetup_event)
