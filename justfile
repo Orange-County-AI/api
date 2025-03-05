@@ -1,4 +1,4 @@
 set dotenv-load
 
-local:
-    uv run uvicorn app:app --reload --host localhost --port 8000
+local port='8283':
+    uv run uvicorn app:app --reload --host localhost --port {{port}}

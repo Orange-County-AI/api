@@ -14,9 +14,9 @@ from pocketbase_orm import PBModel
 from pocketbase import PocketBase
 from loguru import logger
 
-# logging.basicConfig(level=logging.DEBUG)
 
 sentry_sdk.init(os.environ["SENTRY_DSN"])
+logger.info("Sentry SDK initialized")
 
 MEETUP_URL = "https://www.meetup.com/orange-county-ai/events/"
 
@@ -53,17 +53,34 @@ app.add_middleware(
 )
 
 
-# @app.middleware("http")
-# async def log_requests(request: Request, call_next):
-#     """Log incoming requests and their CORS headers"""
-#     logger.info(f"Incoming request: {request.method} {request.url}")
-#     logger.info(f"Origin: {request.headers.get('origin')}")
-#     logger.info(f"Headers: {dict(request.headers)}")
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Log incoming requests and their CORS headers"""
+    logger.info(
+        "Incoming request",
+        extra={
+            "method": request.method,
+            "url": str(request.url),
+            "origin": request.headers.get("origin"),
+            "headers": dict(request.headers),
+        },
+    )
 
-#     response = await call_next(request)
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = time.time() - start_time
 
-#     logger.info(f"Response headers: {dict(response.headers)}")
-#     return response
+    logger.info(
+        "Request completed",
+        extra={
+            "method": request.method,
+            "url": str(request.url),
+            "status_code": response.status_code,
+            "process_time": f"{process_time:.2f}s",
+            "response_headers": dict(response.headers),
+        },
+    )
+    return response
 
 
 @app.get("/", response_class=RedirectResponse, status_code=303)
@@ -82,6 +99,7 @@ async def list_events(
     ),
 ):
     """Get all upcoming events from Orange County AI meetup group."""
+    logger.info("Fetching events", extra={"limit": limit, "sort": sort})
     try:
         events = get_events(MEETUP_URL)
         events_list = [asdict(event) for event in events]
@@ -96,52 +114,72 @@ async def list_events(
         if limit is not None:
             events_list = events_list[:limit]
 
+        logger.info(
+            "Events fetched successfully",
+            extra={"event_count": len(events_list)},
+        )
         return events_list
     except Exception as e:
+        logger.error(
+            "Error fetching events",
+            extra={"error": str(e), "error_type": type(e).__name__},
+        )
         raise HTTPException(status_code=500, detail=str(e))
 
 
 def generate_ghost_token(ghost_admin_key: str) -> str:
     """Generate a Ghost Admin API token."""
-    [id, secret] = ghost_admin_key.split(":")
-    # Create the token header
-    header = {"alg": "HS256", "typ": "JWT", "kid": id}
-    # Create the token payload
-    iat = int(time.time())
-    payload = {
-        "iat": iat,
-        "exp": iat + 5 * 60,  # Token expires in 5 minutes
-        "aud": "/admin/",
-    }
-    # Create the token
-    token = jwt.encode(
-        payload, bytes.fromhex(secret), algorithm="HS256", headers=header
-    )
-    return token
+    logger.debug("Generating Ghost Admin API token")
+    try:
+        [id, secret] = ghost_admin_key.split(":")
+        header = {"alg": "HS256", "typ": "JWT", "kid": id}
+        iat = int(time.time())
+        payload = {
+            "iat": iat,
+            "exp": iat + 5 * 60,
+            "aud": "/admin/",
+        }
+        token = jwt.encode(
+            payload, bytes.fromhex(secret), algorithm="HS256", headers=header
+        )
+        logger.debug("Ghost Admin API token generated successfully")
+        return token
+    except Exception as e:
+        logger.error(
+            "Error generating Ghost token",
+            extra={"error": str(e), "error_type": type(e).__name__},
+        )
+        raise
 
 
 @app.post("/subscribe")
 def subscribe_email(email: str = Body(..., embed=True)):
     """Subscribe an email address to the Orange County AI blog."""
+    logger.info("Processing subscription request", extra={"email": email})
+
     if not GHOST_ADMIN_KEY:
+        logger.error("Ghost API key not configured")
         raise HTTPException(status_code=500, detail="Ghost API key not configured")
 
     try:
         subscriber = NewsletterSubscriber(email=email)
         subscriber.save()
+        logger.info("Subscriber saved to PocketBase", extra={"email": email})
     except Exception as e:
         data = e.data.get("data", {})
-        if data.get("email").get("code", "") == "validation_not_unique":
-            logger.info(f"Email {email} is already subscribed")
+        if data.get("email", {}).get("code", "") == "validation_not_unique":
+            logger.info("Duplicate subscription attempt", extra={"email": email})
         else:
-            logger.exception(e)
+            logger.exception(
+                "Error saving subscriber to PocketBase",
+                extra={"error": str(e), "email": email},
+            )
             raise HTTPException(status_code=500, detail="Internal server error")
 
     try:
-        # Generate the token
         token = generate_ghost_token(GHOST_ADMIN_KEY)
+        logger.debug("Ghost token generated for subscription")
 
-        # Create a member in Ghost
         response = httpx.post(
             f"{GHOST_API_URL}/ghost/api/admin/members/",
             headers={
@@ -152,23 +190,37 @@ def subscribe_email(email: str = Body(..., embed=True)):
         )
 
         if response.status_code == 201:
+            logger.info("Subscription successful", extra={"email": email})
             return {"message": "Successfully subscribed"}
         elif response.status_code == 422:
-            # Check if error is due to existing member
             error_data = response.json()
             if any(
                 "Member already exists" in error.get("context", "")
                 for error in error_data.get("errors", [])
             ):
+                logger.info(
+                    "Attempted to subscribe existing member",
+                    extra={"email": email},
+                )
                 raise HTTPException(
                     status_code=409, detail="Email is already subscribed"
                 )
 
-        logger.error(f"Ghost API error: {response.status_code} - {response.text}")
+        logger.error(
+            "Ghost API error",
+            extra={
+                "status_code": response.status_code,
+                "response": response.text,
+                "email": email,
+            },
+        )
         raise HTTPException(status_code=400, detail="Failed to subscribe email")
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Subscription error: {str(e)}")
+        logger.exception(
+            "Subscription process failed",
+            extra={"error": str(e), "email": email},
+        )
         raise HTTPException(status_code=500, detail="Internal server error")
