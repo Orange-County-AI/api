@@ -11,7 +11,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync
 
 # copy the rest of the app
-COPY app.py ./
+COPY app.py meetup.py ./
 
 # run the app
 CMD ["uv", "run", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8283"]

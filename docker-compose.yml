@@ -3,3 +3,5 @@ services:
     build: .
     ports:
       - 8283:8283
+    env_file:
+      - .env
